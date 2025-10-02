@@ -1,0 +1,384 @@
+---
+title: "SAA Analysis LB data"
+author: "Gregg Griffenhagen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+library(lme4)
+library(lmerTest)
+library(tidyverse)
+library(magrittr)
+library(emmeans)
+library(kableExtra)
+library(ggrepel)
+library(outliers)
+library(dplyr)
+
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  library(plyr)
+  library(dplyr)
+  
+  # New version of length which can handle NA's: if na.rm==T, don't count them
+  length2 <- function (x, na.rm=FALSE) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }
+  
+  # This does the summary. For each group's data frame, return a vector with
+  # N, mean, and sd
+  datac <- ddply(data, groupvars, .drop=.drop,
+                 .fun = function(xx, col) {
+                   c(N    = length2(xx[[col]], na.rm=na.rm),
+                     mean = mean   (xx[[col]], na.rm=na.rm),
+                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                   )
+                 },
+                 measurevar
+  )
+  
+  # Rename the "mean" column    
+  datac <- rename(datac, c("mean" = measurevar))
+  
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+  
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval: 
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult
+  
+  return(datac)
+}
+
+```
+## Import and check data
+
+```{r}
+data <- read.table('LL_LP_SAA_cytokine_data_0925.csv', sep = ",", header = TRUE, quote = "")
+  #change ID and group to factor variables
+data %<>% mutate_at(c("ID", "group"), factor)
+head(data)
+str(data)
+```
+
+## Plot all SAA data, with trend lines for each horse
+```{r}
+plot1 <- ggplot(data, aes(hrs, saa))
+plot1 + geom_jitter(aes(color = group)) +
+  geom_smooth(aes(color = group), se = FALSE) +
+  geom_line(aes(group = ID))
+```
+
+## There is one outlier, check cytokine data for similar
+
+```{r}
+  # add separator for new controls and older data
+data$time <- ifelse(data$ID == 'Vesunna'|
+                      data$ID == 'Rita'|
+                      data$ID == 'Myla',
+                                      'new', 'old') %>% factor()
+str(data)  
+  #test plot
+labels1 <- data %>% filter(time == 'new' & hrs == 72)
+labels2 <- data %>% filter(ID == 'Rita' & hrs == 48)
+  # create separately d/t Rita data ending at 48 hrs
+p <- ggplot(data, aes(hrs, Eotaxin)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+# works as expected
+p2 <- ggplot(data, aes(hrs, G.CSF)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p3 <- ggplot(data, aes(hrs, IL1a)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p4 <- ggplot(data, aes(hrs, IL.5)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p5 <- ggplot(data, aes(hrs, IL.18)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p6 <- ggplot(data, aes(hrs, IL.6)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p7 <- ggplot(data, aes(hrs, IL.17A)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p8 <- ggplot(data, aes(hrs, IL.2)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p9 <- ggplot(data, aes(hrs, IL.4)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p10 <- ggplot(data, aes(hrs, IFNg)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p11 <- ggplot(data, aes(hrs, IL.8)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p12 <- ggplot(data, aes(hrs, IP.10)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p13 <- ggplot(data, aes(hrs, IL.10)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+p14 <- ggplot(data, aes(hrs, TNFa)) +
+  geom_line(aes(group = ID, color = time)) +
+  geom_text_repel(data = labels1, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3) +
+  geom_text_repel(data = labels2, aes(label = ID),
+                  fontface ="plain", color = "black", size = 3)
+
+plot_list <- list(p, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14)
+combined_plot <- patchwork::wrap_plots(plot_list, nrow=4, guides='collect')
+print(combined_plot)
+```
+
+## Similar, there seems to be a single outlier. Check formal test:
+
+```{r}
+# check time zero for initial outliers
+saa_0 <- data %>% filter (hrs == 0) %>% .$saa
+dixon.test(saa_0, two.sided=F)
+  #yes, value of 1716 at time 0 is an outlier in horse AB
+  #Check eotaxin, gcsf and IL8
+eotaxin_0 <- data %>% filter (hrs == 0) %>% .$Eotaxin
+dixon.test(eotaxin_0, two.sided = F)
+gcsf_0 <- data %>% filter (hrs == 0) %>% .$G.CSF
+dixon.test(gcsf_0, two.sided = F)
+IL8_0 <- data %>% filter (hrs == 0) %>% .$IL.8
+dixon.test(IL8_0, two.sided = F)
+  #all yes, Myla is an outlier
+```
+
+## Given the above analysis, suggest removing both horses from analysis. Both
+## were outliers at time 0, although interestingly, they were only outliers for one anaysis (either SAA or cytokines), but not both...
+
+## Remove outliers and summarize SAA data
+
+```{r}
+data2 <- data %>% filter(ID != 'AB' & ID != 'Myla')
+
+data_summary <- data2 %>% 
+  group_by(hrs, group) %>%
+  summarise(mean = mean(saa), sd = sd(saa), min = min(saa), max = max(saa))
+#knitr::kable(data_summary)
+kbl(data_summary, longtable = T, booktabs = T, align = "c") %>%
+  column_spec(1, bold=T) %>%
+  collapse_rows(columns = 1:2, latex_hline = "major", valign = "middle")
+```
+
+### Create model
+```{r}
+
+# create model
+model_small <- lmer(saa ~ group*hrs + (1|ID), data = data2)
+coef(summary(as(model_small, "lmerModLmerTest"), ddf="Kenward-Roger"))
+# note the only real difference is over time, no groups are different in this analysis
+```
+
+## The only differences are in time, no groups are different overall
+### Check if there are differences between groups at any time point?
+```{r}
+emm_small2 <- emmeans(model_small, ~ group|hrs, at = list(hrs=c(0,0.5, 1, 2, 4, 8, 24, 48, 72)))
+#emm_small2
+pairs(emm_small2) # there are small differences in 20 vs 40 at 48 & 72 hrs
+                  # with 40 being lower than 20
+```
+### It looks like the control and LB40 groups are different at 48 and 72 hrs (with
+###   40 being lower)
+
+## Plot the differences
+
+```{r}
+saa_plot_data <- data %>%
+  filter(ID != 'AB' & ID != 'Myla') %>%
+  summarySE(measurevar = 'saa', groupvars = c('group', 'hrs'))
+# set jitter
+pd <- position_dodge(3)
+# plot saa
+saa_plot <- ggplot(data = saa_plot_data, aes(x = hrs, y = saa, group = group)) +
+  geom_errorbar(aes(ymin=saa-ci, ymax=saa+ci), width=2, position=pd) +
+  geom_line(aes(linetype = group), position=pd) +
+  geom_point(aes(shape = group), size = 3, position=pd) +
+  annotate(geom = 'text', x = c(48, 72), y = c(2450, 2350), label = '*', size = 10)
+print(saa_plot)
+```
+
+## There were small differences between
+## groups for Eotaxin, G-CSF and IL-8
+### Eotaxin - all time points control was different from both groups except at time 72 hrs, where LB20 was not different from control
+```{r}
+model_eotaxin <- lmer(Eotaxin ~ group*hrs + (1|ID), data = data2)
+coef(summary(as(model_eotaxin, "lmerModLmerTest"), ddf="Kenward-Roger")) # Nothing there
+emm_eotaxin <- emmeans(model_eotaxin, ~ group|hrs, at = list(hrs=c(0,0.5, 1, 2, 4, 8, 24, 48, 72)))
+pairs(emm_eotaxin)
+contrast(emm_eotaxin, "trt.vs.ctrl")
+eotaxin_plot_data <- data %>%
+  filter(ID != 'AB' & ID != 'Myla') %>%
+  summarySE(measurevar = 'Eotaxin', groupvars = c('group', 'hrs'))
+# set jitter
+pd <- position_dodge(3)
+# plot
+eotaxin_plot <- ggplot(data = eotaxin_plot_data, aes(x = hrs, y = Eotaxin, group = group)) +
+  geom_errorbar(aes(ymin=Eotaxin-ci, ymax=Eotaxin+ci), width=2, position=pd) +
+  geom_line(aes(linetype = group), position=pd) +
+  geom_point(aes(shape = group), size = 3, position=pd) 
+  #annotate(geom = 'text', x = c(48, 72), y = c(2450, 2350), label = '*', size = 10)
+print(eotaxin_plot)
+```
+### G-CSF
+```{r}
+model_gcsf <- lmer(G.CSF ~ group*hrs + (1|ID), data = data2)
+coef(summary(as(model_gcsf, "lmerModLmerTest"), ddf="Kenward-Roger")) # Nothing there
+emm_gcsf <- emmeans(model_gcsf, ~ group|hrs, at = list(hrs=c(0,0.5, 1, 2, 4, 8, 24, 48, 72)))
+pairs(emm_gcsf)
+contrast(emm_gcsf, "trt.vs.ctrl")
+gcsf_plot_data <- data %>%
+  filter(ID != 'AB' & ID != 'Myla') %>%
+  summarySE(measurevar = 'G.CSF', groupvars = c('group', 'hrs'))
+# set jitter
+pd <- position_dodge(3)
+# plot
+gcsf_plot <- ggplot(data = gcsf_plot_data, aes(x = hrs, y = G.CSF, group = group)) +
+  geom_errorbar(aes(ymin=G.CSF-ci, ymax=G.CSF+ci), width=2, position=pd) +
+  geom_line(aes(linetype = group), position=pd) +
+  geom_point(aes(shape = group), size = 3, position=pd)
+  #annotate(geom = 'text', x = c(48, 72), y = c(2450, 2350), label = '*', size = 10)
+print(gcsf_plot)
+```
+
+### IL-8
+```{r}
+model_IL.8 <- lmer(IL.8 ~ group*hrs + (1|ID), data = data2)
+coef(summary(as(model_IL.8, "lmerModLmerTest"), ddf="Kenward-Roger")) # 20 & 40 diff early on
+emm_IL.8 <- emmeans(model_IL.8, ~ group|hrs, at = list(hrs=c(0,0.5, 1, 2, 4, 8, 24, 48, 72)))
+pairs(emm_IL.8)
+contrast(emm_IL.8, "trt.vs.ctrl")
+
+IL8_plot_data <- data %>%
+  filter(ID != 'AB' & ID != 'Myla') %>%
+  summarySE(measurevar = 'IL.8', groupvars = c('group', 'hrs'))
+# set jitter
+pd <- position_dodge(3)
+# plot
+IL8_plot <- ggplot(data = IL8_plot_data, aes(x = hrs, y = IL.8, group = group)) +
+  geom_errorbar(aes(ymin=IL.8-se, ymax=IL.8+se), width=2, position=pd) +
+  geom_line(aes(linetype = group), position=pd) +
+  geom_point(aes(shape = group), size = 3, position=pd) +
+  annotate(geom = 'text', x = c(0, 0.5, 1, 2, 4, 8, 24), y = c(275, 300, 325, 350, 350, 350, 350), label = '*', size = 10)
+print(IL8_plot)
+```
+
+## There were also differences in a few cytokines at 72 hrs that I believe were
+## unrelated to the study but were in fact related to the analysis - spurious data
+## These 2 plots look at the aggregate data and individual results
+```{r}
+IL18_plot_data <- data %>%
+  filter(ID != 'AB' & ID != 'Myla') %>%
+  summarySE(measurevar = 'IL.18', groupvars = c('group', 'hrs'))
+# set jitter
+pd <- position_dodge(3)
+# plot
+IL18_plot <- ggplot(data = IL18_plot_data, aes(x = hrs, y = IL.18, group = group)) +
+  geom_errorbar(aes(ymin=IL.18-ci, ymax=IL.18+ci), width=2, position=pd) +
+  geom_line(aes(linetype = group), position=pd) +
+  geom_point(aes(shape = group), size = 3, position=pd) +
+  annotate(geom = 'text', x = 72, y = 280, label = '*', size = 10)
+#print(IL18_plot)
+IL18_raw <- ggplot(data2, aes(hrs, IL.18))
+IL18_raw_plot <- IL18_raw + geom_jitter(aes(color=group)) +
+  geom_smooth(aes(color=group), se=FALSE) +
+  geom_line(aes(group=ID))
+
+IL6_plot_data <- data %>%
+  filter(ID != 'AB' & ID != 'Myla') %>%
+  summarySE(measurevar = 'IL.6', groupvars = c('group', 'hrs'))
+# set jitter
+pd <- position_dodge(3)
+# plot
+IL6_plot <- ggplot(data = IL6_plot_data, aes(x = hrs, y = IL.6, group = group)) +
+  geom_errorbar(aes(ymin=IL.6-se, ymax=IL.6+se), width=2, position=pd) +
+  geom_line(aes(linetype = group), position=pd) +
+  geom_point(aes(shape = group), size = 3, position=pd) +
+  annotate(geom = 'text', x = 72, y = 125, label = '*', size = 10)
+#print(IL6_plot)
+IL6_raw <- ggplot(data2, aes(hrs, IL.6))
+IL6_raw_plot <- IL6_raw + geom_jitter(aes(color=group)) +
+  geom_smooth(aes(color=group), se=FALSE) +
+  geom_line(aes(group=ID))
+
+IL2_plot_data <- data %>%
+  filter(ID != 'AB' & ID != 'Myla') %>%
+  summarySE(measurevar = 'IL.2', groupvars = c('group', 'hrs'))
+# set jitter
+pd <- position_dodge(3)
+# plot
+IL2_plot <- ggplot(data = IL2_plot_data, aes(x = hrs, y = IL.2, group = group)) +
+  geom_errorbar(aes(ymin=IL.2-se, ymax=IL.2+se), width=2, position=pd) +
+  geom_line(aes(linetype = group), position=pd) +
+  geom_point(aes(shape = group), size = 3, position=pd) +
+  annotate(geom = 'text', x = 72, y = 110, label = '*', size = 10)
+#print(IL2_plot)
+IL2_raw <- ggplot(data2, aes(hrs, IL.2))
+IL2_raw_plot <- IL2_raw + geom_jitter(aes(color=group)) +
+  geom_smooth(aes(color=group), se=FALSE) +
+  geom_line(aes(group=ID))
+
+IL.2.6.18_plot <- patchwork::wrap_plots(IL2_plot, IL6_plot, IL18_plot,
+                                        nrow=2, guides='collect')
+print(IL.2.6.18_plot)
+
+IL.2.6.18_raw_plot <- patchwork::wrap_plots(IL2_raw_plot, IL6_raw_plot, IL18_raw_plot,
+                                            nrow=2, guides='collect')
+print(IL.2.6.18_raw_plot)
+```
+
+
+# Code used to evaluate and graph the data
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
