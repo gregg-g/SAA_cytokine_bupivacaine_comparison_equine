@@ -65,8 +65,9 @@ pairs(emm_small2) # there are small differences in 20 vs 40 at 48 & 72 hrs
                   # with 40 being lower than 20
 contrast(emm_small2, "trt.vs.ctrl") # no differences now
 
-# compare all horses over time without regard for group
+# compare all horses over time without regard for group for saa data
 model_small2 <- lmer(saa ~ factor(hrs) + (1|ID), data = data2)
+summary(model_small2)
 emm_small3 <- emmeans(model_small2, ~ hrs, at = list(hrs=c(0,0.5, 1, 2, 4, 8, 24, 48, 72)))
 contrast(emm_small3, "trt.vs.ctrl")
 
