@@ -154,9 +154,8 @@ plot1 + geom_jitter(aes(color = group)) +
 
 # plot saa without horse AB and Myla as outliers
 plot2 <- data %>% filter(ID != 'AB' & ID != 'Myla') %>% ggplot(aes(hrs, saa))
-plot2 + geom_jitter(aes(color = group)) +
-  geom_smooth(aes(color = group), se = FALSE) +
-  geom_line(aes(group = ID))
+plot2 + geom_jitter(aes(shape = group), width = 2) +
+  geom_line(data = saa_plot_data, aes(hrs))
 
 # Better plot to evaluate groups
 # summarize data
@@ -273,3 +272,8 @@ IL8_plot <- ggplot(data = IL8_plot_data, aes(x = hrs, y = IL.8, group = group)) 
   geom_point(aes(shape = group), size = 3, position=pd) +
   annotate(geom = 'text', x = c(0, 0.5, 1, 2, 4, 8, 24), y = c(275, 300, 325, 350, 350, 350, 350), label = '*', size = 10)
 print(IL8_plot)
+
+# playing around with IL8 data
+p_il8 <- ggplot(data2, aes(hrs, IL.8)) +
+  geom_line(aes(group = ID, color = group))
+print(p_il8)  
