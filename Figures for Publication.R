@@ -9,12 +9,13 @@ labels_p_supp_1 <- data %>% filter(saa > 1000 & hrs == 0)
 p_supp_1 <- ggplot(data, aes(hrs, saa)) +
   geom_line(aes(group = ID)) +
   geom_text_repel(data = labels_p_supp_1, aes(label = ID),
-                  fontface ="plain", color = "black", size = 3) +
+                  fontface ="plain", color = "black", size = 5) +
   labs(x = 'Time(hrs)', y = 'Serum Amyloid A (mcg/mL)',
        title = 'Plot of Serum Amyloid A over time') +
   theme_bw() +
   xlim(0, 72) + ylim(0, 3100)
 print(p_supp_1)
+ggsave('Supplemental1.png', width = 5, height = 5, units = 'in')
 
 # Figure_supp_2
 # Cytokine data plot to ID outlier
@@ -111,6 +112,7 @@ plot_list <- list(p, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14)
 
 p_supp_2 <- patchwork::wrap_plots(plot_list, nrow=4, guides='collect')
 print(p_supp_2)
+ggsave('Supplemental2.png', width = 9, height = 9, units = 'in')
 
 #Figure 2
 # plot saa without horse AB and Myla as outliers
@@ -131,11 +133,13 @@ figure_2 <- ggplot(data = saa_plot_data_overall, aes(hrs,saa)) +
   geom_errorbar(aes(ymin=saa-ci, ymax=saa+ci), width=2) +
   geom_point(data = data2, aes(shape = group), size = 2.5, position = pd) +
   labs(x = 'Time(hrs)', y = 'Serum Amyloid A (mcg/mL)',
-       title = 'Plot of Serum Amyloid A over time') +
-  annotate(geom = 'text', x = c(48, 72), y = c(3000, 2900),
+       title = 'Plot of Serum Amyloid A Over Time') +
+  annotate(geom = 'text', x = c(48, 72), y = c(2700, 3000),
            label = '*', size = 10) +
-  theme_bw()
+  theme_classic() +
+  scale_shape_manual(values = c(0:2))
 print(figure_2)
+ggsave('Fig2.png', width = 5, height = 5, units = 'in')
 
 # Figure 3
 # SAA by group
@@ -150,10 +154,12 @@ figure_3 <- ggplot(data = saa_plot_data, aes(x = hrs, y = saa, group = group)) +
   geom_line(aes(linetype = group), position=pd) +
   geom_point(aes(shape=group), size = 2.5, position = pd) +
   annotate(geom = 'text', x = c(48, 72), y = c(2450, 2350), label = '*', size = 10) +
-  theme_bw() +
+  theme_classic() +
+  scale_shape_manual(values = c(0:2)) +
   labs(x = 'Time(hrs)', y = 'Serum Amyloid A (mcg/mL)',
-       title = 'Plot of Serum Amyloid A over time')
+       title = 'Plot of Serum Amyloid A by Group')
 print(figure_3)
+ggsave('Fig3.png', width = 5, height = 5, units = 'in')
 
 # figure 4
 # plot of 3 cytokines over time
@@ -168,7 +174,8 @@ figure_4a <- ggplot(data = eotaxin_plot_data, aes(x = hrs, y = Eotaxin, group = 
   geom_errorbar(aes(ymin=Eotaxin-ci, ymax=Eotaxin+ci), width=2, position=pd) +
   geom_line(aes(linetype = group), position=pd) +
   geom_point(aes(shape = group), size = 3, position=pd) +
-  theme_bw()
+  theme_classic() +
+  scale_shape_manual(values = c(0:2))
 print(figure_4a)
 
 #gcsf plot
@@ -182,7 +189,9 @@ figure_4b <- ggplot(data = gcsf_plot_data, aes(x = hrs, y = G.CSF, group = group
   geom_errorbar(aes(ymin=G.CSF-ci, ymax=G.CSF+ci), width=2, position=pd) +
   geom_line(aes(linetype = group), position=pd) +
   geom_point(aes(shape = group), size = 3, position=pd) +
-  theme_bw()
+  theme_classic() +
+  labs(y = "GCSF") +
+  scale_shape_manual(values = c(0:2))
 print(figure_4b)
 
 # IL-8 plot
@@ -197,10 +206,13 @@ figure_4c <- ggplot(data = IL8_plot_data, aes(x = hrs, y = IL.8, group = group))
   geom_point(aes(shape = group), size = 3, position=pd) +
 #  annotate(geom = 'text', x = c(0, 0.5, 1, 2, 4, 8, 24),
 #           y = c(275, 300, 325, 350, 350, 350, 350), label = '*', size = 10) +
-  theme_bw()
+  theme_classic() +
+  scale_shape_manual(values = c(0:2)) +
+  labs(y = "IL-8")
 print(figure_4c)
 
 # now combine the three plots (4a, 4b, 4c)
 figure_4 <- patchwork::wrap_plots(figure_4a, figure_4b, figure_4c,
                                   nrow = 1, guides = "collect")
 print(figure_4)
+ggsave('Fig4.png', width = 15, height = 5, units = 'in')
